@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body{
+        width: 100%;
+        margin: auto;
+        min-width: 600px;
+        max-width: 1600px;
+      }
+
+      #header {
+        background-color: #D94F20;
+        height: 100px;
+
+        line-height: 100px;
+      }
+      #header h1 {
+        color: white;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      #title {
+        display: block;
+        float: left;
+        font-size: 20px;
+        font-weight: bold;
+      }
+      .content {
+        font-family: sans-serif;
+        font-size: 12px;
+      }
+
+      .container {
+        width: 80%;
+        margin: 0 auto;
+        max-width: 1300px;
+        min-width: 600px;
+      }
+
+      .button{
+        width: 100px;
+      }
+
+      .button:hover{
+        background-color: #aaaaaa;
+      }
+
+      #ledstrip1{
+        display: block;
+        float:left;
+      }
+
+      #ledstrip2{
+        display: block;
+        float:left;
+        margin-top: 0;
+        margin-left: 100px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="header">
+      <div class="container">
+        <h1 id="title">Ledstrip aansturen</h1>
+      </div><!--container-->
+    </div><!--header-->
+
+    <div class="content">
+      <div class="container"><br>
+        <h2>Click on one of the buttons:</h2>
+        <div class="Ledstrip" id="ledstrip1">
+          <h3 id = title1>Ledstrip 1</h3>
+          <p>Stel de kleur in:</p>
+          <input type="color" id="setColor1">
+          <p>kies een functie:</p>
+          <a href='/rainbow?fade=3000&s=1'><button class="button" type="button" name="rainbow">Rainbow</button></a><br>
+          <a class= "colorDepending1" href='/wave?c=#000000&fade=5000&s=1' ><button class="button" type="button" name="wave">wave</button></a> <br>
+          <a class= "colorDepending1" href='/setleds?c=#000000&fade=1000&s=1'><button class="button" type="button" name="setleds">set color</button></a><br>
+          <a class= "colorDepending1" href='/colorWipe?c=#000000&s=1'><button class="button" type="button" name="wipe">wipe</button></a><br>
+          <a href='/setpins?D1=128&D2=256&D3=512&s=1'><button class="button" type="button" name="setPins">SetPins</button></a><br>
+          <a href='/togglepins?s=1'><button class="button" type="button" name="togglePins">togglePins</button></a><br>
+          <a href='/ledsoff?fade=500&s=1'><button class="button" type="button" name="off">off</button></a><br>
+
+        </div><!--Ledstrip-->
+        <div class="Ledstrip" id="ledstrip2">
+          <h3 id=title2>Ledstrip 2</h3>
+          <p>Stel de kleur in:</p>
+          <input type="color" id="setColor2">
+          <p>kies een functie:</p>
+          <a href='/rainbow?fade=3000&s=2'><button class="button" type="button" name="rainbow">Rainbow</button></a><br>
+          <a class= colorDepending2 href='/wave?c=#000000&fade=5000&s=2' ><button class="button" type="button" name="wave">wave</button></a> <br>
+          <a class= colorDepending2 href='/setleds?c=#000000&fade=1000&s=2'><button class="button" type="button" name="setleds">set color</button></a><br>
+          <a class= colorDepending2 href='/colorWipe?c=#000000&s=2'><button class="button" type="button" name="wipe">wipe</button></a><br>
+          <a href='/setpins?D1=128&D2=256&D3=512&s=2'><button class="button" type="button" name="setPins">SetPins</button></a><br>
+          <a href='/togglepins&s=2'><button class="button" type="button" name="togglePins">togglePins</button></a><br>
+          <a href='/ledsoff?fade=500&s=2'><button class="button" type="button" name="off">off</button></a><br>
+
+        </div><!--Ledstrip-->
+      </div><!--container-->
+    </div><!--content-->
+
+    <script type="text/javascript">
+    var setColor;
+    links = document.getElementsByClassName('colorDepending1')
+    setColor = document.querySelector("#setColor1");
+    setColor.addEventListener("input", updateFirst, false);
+    function updateFirst(event){
+      var h3 = document.querySelector("#title1");
+      if (h3){
+        h3.style.color = event.target.value;
+        for (var i=0; i<links.length; i++){
+          var link = links[i].getAttribute('href');
+          var splitLink = link.split(link.slice(link.indexOf("c=")+2, link.indexOf("c=")+9));
+          links[i].setAttribute('href', splitLink[0] + event.target.value + splitLink[1]);
+        }
+      }
+    }
+    </script><!--setColor1-->
+    <script type="text/javascript">
+      var setColor;
+      links = document.getElementsByClassName('colorDepending2')
+      setColor = document.querySelector("#setColor2");
+      setColor.addEventListener("input", updateFirst, false);
+      function updateFirst(event){
+        var h3 = document.querySelector("#title2");
+        if (h3){
+          h3.style.color = event.target.value;
+          for (var i=0; i<links.length; i++){
+            var link = links[i].getAttribute('href');
+            var splitLink = link.split(link.slice(link.indexOf("c=")+2, link.indexOf("c=")+9));
+            links[i].setAttribute('href', splitLink[0] + event.target.value + splitLink[1]);
+          }
+        }
+      }
+      </script><!--setColor1-->
+  </body>
+</html>
