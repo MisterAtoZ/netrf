@@ -11,8 +11,14 @@ int i=0;
 int q=0;
 int k=0;
 boolean theateroff = false;
-int led1 = 0;
+int led1 = 5;
 int led2 = 1;
+
+long sinTab[256];
+uint8_t rgbWave[3] = {0, 0, 0};
+int t,w,start;
+long s;
+int i2=0;
 
 // Parameter 1 = number of pixels in strip11
 // Parameter 2 = Arduino pin number (most are valid)
@@ -38,7 +44,9 @@ void setup() {
     if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
   #endif
   // End of trinket special code*/
-
+  for(i=0;i<strip1.numPixels();i++){
+    sinTab[i] = sin(3.1415 / 128 * i) * 0x7fff + 0x8000;
+  }
   strip1.begin();
   strip2.begin();
   strip1.show(); // Initialize all pixels to 'off'
@@ -71,16 +79,18 @@ void loop() {
   /*theaterChaseRainbow(50);
     loopledje();*/
   //ifs voor de rainbow
-  if(j >= 256*5) {j=0;}
+  if(j >= 256*5) {j=0; t = ((millis() - start) / 63) & 255; w = ((millis() - start) / 71) & 255; start = millis();}
   if(q >= 3) {q=0;}
+  if(i2>= 5){i2=0; long newValue = sinTab[0]; memcpy(sinTab, &sinTab[1], sizeof(sinTab) );sinTab[71] = newValue;}//- sizeof(int)); sinTab[sizeof(sinTab)+1] = newValue;}
   if(i >= strip1.numPixels()) {
     i=0;
-    if(led1==0 and led2==0){
+    if(led1!=1 and led2!=1){
       strip1.show();
       strip2.show();
       delay(50); //rainbowdelay
     } 
     j++;
+    i2++;
   }
 
   //ifs voor de theaterchase
@@ -104,9 +114,21 @@ void loop() {
      break;
     case 1: //theaterchase
       if(theateroff == false) {
-        strip1.setPixelColor(k+q,0,50,0);
+        strip1.setPixelColor(k+q,128,0,125);
       }
       else {strip1.setPixelColor(k+q,0,0,0);}
+    break;
+    case 3: //ledsoff
+      strip1.setPixelColor(i,0,0,0);
+    break;
+    case 4: //SetColor
+      strip1.setPixelColor(i,50,50,0);
+    break;
+    case 5:
+      //sinTab[i] = sin(3.1415 / 128 * i) * 0x7fff + 0x8000;
+      //s = (sinTab[(i*3 + t) & 255] >> 8) * (sinTab[-(i*4 + w) & 255] >> 8);
+      strip1.setPixelColor(i, sinTab[i]);
+      //strip1.setPixelColor(i, (rgbWave[0] * s) >> 16, (rgbWave[1] * s) >> 16, (rgbWave[2] * s) >> 16);
     break;
     default:
       strip1.setPixelColor(i,0,0,0);
@@ -121,17 +143,26 @@ void loop() {
      break;
     case 1://theaterchase
       if(theateroff == false) {
-        strip2.setPixelColor(k+q,50,0,0);
+        strip2.setPixelColor(k+q,0,20,150);
       }
       else {strip2.setPixelColor(k+q,0,0,0);}
+    break;
+    case 3: //ledsoff
+      strip2.setPixelColor(i,0,0,0);
+    break;
+    case 4: //SetColor
+      strip2.setPixelColor(i,50,0,50);
+    break;
+    case 5:
+      sinTab[i+i2] = sin(3.1415 / 128 * i) * 0x7fff + 0x8000;
+      
+      strip2.setPixelColor(i, sinTab[i]);
     break;
     default:
       strip2.setPixelColor(i,0,0,0);
     break;
   }
-    
   //=======================================================
-
   k=k+3;
   i++;
 }
