@@ -1,21 +1,33 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+
+const char* ssid = "DriePlusVeertien";
+const char* password = "achttien";
+
+ESP8266WebServer server(80);
+
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
 #endif
 
-#define PIN1 0
-#define PIN2 2
+#define PIN1 0 //D3
+#define PIN2 2 //D4
 
 int j=0;
 int i=0;
 int q=0;
 int k=0;
 boolean theateroff = false;
-int led1 = 5;
-int led2 = 1;
+int led1 = 2;
+int led2 = 2;
 
 long sinTab[256];
-uint8_t rgbWave[3] = {0, 0, 0};
+//uint8_t rgbWave[] = {0, 0, 0};
+byte rgb1[] = {50, 0, 0};
+byte rgb2[] = {0, 50, 0};
 int t,w,start;
 long s;
 int i2=0;
@@ -38,12 +50,115 @@ Adafruit_NeoPixel strip2 = Adafruit_NeoPixel(72, PIN2, NEO_GRB + NEO_KHZ800);
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
 
+int getArgValue(String name)
+{
+  for (uint8_t i = 0; i < server.args(); i++)
+    if(server.argName(i) == name)
+      return server.arg(i).toInt();
+  return -1;
+}
+
+String getArgValueString(String name)
+{
+  for (uint8_t i = 0; i < server.args(); i++)
+    if(server.argName(i) == name)
+      Serial.println("de getargvalue van de kleur is: "+ (String)server.arg(i));
+      Serial.println(server.arg(i));
+      return server.arg(i);
+  Serial.println("getargs is zwart(geen waarde)");
+  return "#000000";
+}
+
+void handleNotFound(){
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET)?"GET":"POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i=0; i<server.args(); i++){
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+}
+
+void handleRoot() {
+  String message ="<!DOCTYPE html> <html> <head> <style> body{ width: 100%; margin: auto; min-width: 600px; max-width: 1600px; } #header { background-color: #D94F20; height: 100px; line-height: 100px; } #header h1 { color: white; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; } #title { display: block; float: left; font-size: 20px; font-weight: bold; } .content { font-family: sans-serif; font-size: 12px; } .container { width: 80%; margin: 0 auto; max-width: 1300px; min-width: 600px; } .button{ width: 100px; } .button:hover{ background-color: #aaaaaa; } #ledstrip1{ display: block; float:left; } #ledstrip2{ display: block; float:left; margin-top: 0; margin-left: 100px; } </style> </head> <body> <div id='header'> <div class='container'> <h1 id='title'>Ledstrip aansturen</h1> </div><!--container--> </div><!--header--> <div class='content'> <div class='container'><br> <h2>Click on one of the buttons:</h2> <div class='Ledstrip' id='ledstrip1'> <h3 id = title1>Ledstrip 1</h3> <p>Stel de kleur in:</p> <input type='color' id='setColor1' value='#000000'> <p>kies een functie:</p> <a href='/rainbow?s=1'><button class='button' type='button' name='rainbow'>Rainbow</button></a><br> <a class= 'colorDepending1' href='/theaterchase?s=1&c=000000' ><button class='button' type='button' name='theaterchase'>theaterchase</button></a> <br> <a href='/ledsoff?s=1'><button class='button' type='button' name='off'>off</button></a><br> <a class= 'colorDepending1' href='/setcolor?s=1&c=000000'><button class='button' type='button' name='setleds'>set color</button></a><br> </div><!--Ledstrip--> <div class='Ledstrip' id='ledstrip2'> <h3 id=title2>Ledstrip 2</h3> <p>Stel de kleur in:</p> <input type='color' id='setColor2' value='#000000'> <p>kies een functie:</p> <a href='/rainbow?s=2'><button class='button' type='button' name='rainbow'>Rainbow</button></a><br> <a class= colorDepending2 href='/theaterchase?s=2&c=000000' ><button class='button' type='button' name='theaterchase'>theaterchase</button></a> <br> <a href='/ledsoff?s=2'><button class='button' type='button' name='off'>off</button></a><br> <a class= colorDepending2 href='/setcolor?s=2&c=000000'><button class='button' type='button' name='setleds'>set color</button></a><br> </div><!--Ledstrip--> </div><!--container--> </div><!--content--> <script type='text/javascript'> var setColor1; links1 = document.getElementsByClassName('colorDepending1'); setColor1 = document.querySelector('#setColor1'); setColor1.addEventListener('input', updateFirst, false); function updateFirst(event){ var h3 = document.querySelector('#title1'); if (h3){ h3.style.color = event.target.value; for (var i=0; i<links1.length; i++){ var link1 = links1[i].getAttribute('href'); var splitLink1 = link1.split(link1.slice(link1.indexOf('c=')+2, link1.indexOf('c=')+10)); var knopFeedback1 = event.target.value.replace('#',''); var kleur1 = knopFeedback1; links1[i].setAttribute('href', splitLink1[0] + kleur1 + splitLink1[1]); } } } </script><!--setColor1--> <script type='text/javascript'> var setColor2; links2 = document.getElementsByClassName('colorDepending2'); setColor2 = document.querySelector('#setColor2'); setColor2.addEventListener('input', updateSecond, false); function updateSecond(event){ var h3 = document.querySelector('#title2'); if (h3){ h3.style.color = event.target.value; for (var i=0; i<links2.length; i++){ var link2 = links2[i].getAttribute('href'); var splitLink2 = link2.split(link2.slice(link2.indexOf('c=')+2, link2.indexOf('c=')+10)); var knopFeedback2 = event.target.value.replace('#',''); var kleur2 = knopFeedback2; links2[i].setAttribute('href', splitLink2[0] + kleur2 + splitLink2[1]); } } } </script><!--setColor1--> </body> </html>";
+  server.send(200, "text/html", message);
+}
+
+void setRGB(int strip, String color) {
+  Serial.println("de strip in setRGB is: "+(String) strip); 
+  Serial.println("de kleur bij setRGB is: "+color);
+  color = "#"+color; 
+  int number = (int) strtol(&color[1], NULL, 16);
+  int r = number >>16;
+  Serial.print("de waarde van r is: "+(String)r);
+  int g = number >> 8 & 0xFF;
+  Serial.print("de waarde van g is: "+(String)g);
+  int b = number & 0xFF;
+  
+  if(strip==1) {
+    rgb1[0] = r;
+    rgb1[1] = g;
+    rgb1[2] = b;
+  }
+  if(strip==2) {
+    rgb2[0] = r;
+    Serial.print("dit is de waarde van rgb2[0]");
+    Serial.println(rgb2[0]);
+    rgb2[1] = g;
+    Serial.print("dit is de waarde van rgb2[1]");
+    Serial.println(rgb2[1]);
+    rgb2[2] = b;
+    Serial.print("dit is de waarde van rgb2[2]");
+    Serial.println(rgb2[2]);
+  }
+}
+void setRainbow(int strip) {
+  if(strip==1) {led1=0;}
+  else if(strip==2) {led2=0;}
+  else {}
+}
+
+void setTheater(int strip) {
+  if(strip==1) {led1=1;}
+  else if(strip==2) {led2=1;}
+  else {}
+}
+
+void setLedsoff(int strip) {
+  if(strip==1) {led1=2;}
+  else if(strip==2) {led2=2;}
+  else {}
+}
+
+void setledsColor(int strip) {
+  if(strip==1) {led1=3;}
+  else if(strip==2) {led2=3;}
+  else {}
+}
+
 void setup() {
-  /*// This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
-  #if defined (__AVR_ATtiny85__)
-    if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
-  #endif
-  // End of trinket special code*/
+  //initialise WIFI
+   Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  
+  //Setup for the loop
   for(i=0;i<strip1.numPixels();i++){
     sinTab[i] = sin(3.1415 / 128 * i) * 0x7fff + 0x8000;
   }
@@ -52,32 +167,51 @@ void setup() {
   strip1.show(); // Initialize all pixels to 'off'
   
   strip2.show(); // Initialize all pixels to 'off'  
+  //setup for the wifi
+  server.on("/", handleRoot);
+
+  server.on("/rainbow", [](){  
+    //checkFadeAndSetLedFunction(new RainbowFunction());
+    //int fade = getArgValue("fade");
+    int stripRainbow = getArgValue("s");
+    Serial.println("de strip in de rainbow is: "+(String) stripRainbow);
+    setRainbow(stripRainbow);
+    //server.send(200, "text/html", handleroot);
+  });
+
+  server.on("/theaterchase", [](){
+    int stripTheater = getArgValue("s");
+    Serial.println("de strip in de server is: "+(String) stripTheater);
+    String color = getArgValueString("c");
+    Serial.println("de kleur in de server is: "+(String)color);
+    setRGB(stripTheater, color);
+    setTheater(stripTheater);
+    handleRoot();
+    //server.send terug op de originele site zetten
+  });
+
+  server.on("/ledsoff", [](){
+    int stripledsoff = getArgValue("s");
+    setLedsoff(stripledsoff);
+    //server.send terug op de originele site zetten
+  });
+
+  server.on("/setcolor", [](){
+    String color = getArgValueString("c");
+    int stripSet = getArgValue("s");
+    setRGB(stripSet, color);
+    setledsColor(stripSet);
+    //server.send terug op de originele site zetten
+  });
+
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
 }
 
 void loop() {
-  // Some example procedures showing how to display to the pixels:
-  /*colorWipe(strip1.Color(50, 0, 0), 5); // Red
-  colorWipe(strip1.Color(0, 55, 0), 5); // Green
-  colorWipe(strip1.Color(0, 0, 55), 5); // Blue
-  colorWipe(strip1.Color(0, 0, 0), 50); // White RGBW*/
-  // Send a theater pixel chase in...
-  /*theaterChase(strip1.Color(50, 50, 50), 50, 1); // White
-  theaterChase(strip1.Color(50, 0, 0), 50, 1); // Red
-  theaterChase(strip1.Color(0, 0, 50), 469, 1); // Blue
-
-  /*colorWipe(strip2.Color(50, 0, 0), 5); // Red
-  colorWipe(strip2.Color(0, 55, 0), 5); // Green
-  colorWipe(strip2.Color(0, 0, 55), 5); // Blue
-  colorWipe(strip2.Color(0, 0, 0), 50); // White RGBW*/
-  // Send a theater pixel chase in...
-  /*theaterChase(strip2.Color(50, 50, 50), 50, 2); // White
-  theaterChase(strip2.Color(50, 0, 0), 50, 2); // Red
-  theaterChase(strip2.Color(0, 0, 50), 469, 2); // Blue
-  //rainbow(50);
-  rainbowCycle(50,1);
-  rainbowCycle(50,2);
-  /*theaterChaseRainbow(50);
-    loopledje();*/
+  server.handleClient();
   //ifs voor de rainbow
   if(j >= 256*5) {j=0; t = ((millis() - start) / 63) & 255; w = ((millis() - start) / 71) & 255; start = millis();}
   if(q >= 3) {q=0;}
@@ -114,22 +248,22 @@ void loop() {
      break;
     case 1: //theaterchase
       if(theateroff == false) {
-        strip1.setPixelColor(k+q,128,0,125);
+        strip1.setPixelColor(k+q,rgb1[0],rgb1[1],rgb1[2]);
       }
       else {strip1.setPixelColor(k+q,0,0,0);}
     break;
-    case 3: //ledsoff
+    case 2: //ledsoff
       strip1.setPixelColor(i,0,0,0);
     break;
-    case 4: //SetColor
-      strip1.setPixelColor(i,50,50,0);
+    case 3: //setcolor
+      strip1.setPixelColor(i,rgb1[0],rgb1[1],rgb1[2]);
     break;
-    case 5:
+    /*case 4:
       //sinTab[i] = sin(3.1415 / 128 * i) * 0x7fff + 0x8000;
       //s = (sinTab[(i*3 + t) & 255] >> 8) * (sinTab[-(i*4 + w) & 255] >> 8);
       strip1.setPixelColor(i, sinTab[i]);
       //strip1.setPixelColor(i, (rgbWave[0] * s) >> 16, (rgbWave[1] * s) >> 16, (rgbWave[2] * s) >> 16);
-    break;
+    break;*/
     default:
       strip1.setPixelColor(i,0,0,0);
     break;
@@ -143,21 +277,21 @@ void loop() {
      break;
     case 1://theaterchase
       if(theateroff == false) {
-        strip2.setPixelColor(k+q,0,20,150);
+        strip2.setPixelColor(k+q,rgb2[0],rgb2[1],rgb2[2]);
       }
       else {strip2.setPixelColor(k+q,0,0,0);}
     break;
-    case 3: //ledsoff
+    case 2: //ledsoff
       strip2.setPixelColor(i,0,0,0);
     break;
-    case 4: //SetColor
-      strip2.setPixelColor(i,50,0,50);
+    case 3: //SetColor
+      strip2.setPixelColor(i,rgb2[0],rgb2[1],rgb2[2]);
     break;
-    case 5:
+    /*case 4:
       sinTab[i+i2] = sin(3.1415 / 128 * i) * 0x7fff + 0x8000;
       
       strip2.setPixelColor(i, sinTab[i]);
-    break;
+    break;*/
     default:
       strip2.setPixelColor(i,0,0,0);
     break;
@@ -199,44 +333,6 @@ void loopledje() {
     k=k+0.5;
   }
   strip1.Color(0,0,0);
-}
-
-
-//Theatre-style crawling lights.
-void theaterChase(uint32_t c, uint8_t wait) {
-    for (int q=0; q < 3; q++) {
-      for (uint16_t k=0; k < strip1.numPixels(); k=k+3) {
-        strip1.setPixelColor(k+q, c);    //turn every third pixel on
-        strip2.setPixelColor(k+q, strip2.Color(0, 0, 50));
-      }
-      strip1.show();
-      strip2.show();
-
-      delay(wait);
-
-      for (uint16_t k=0; k < strip1.numPixels(); k=k+3) {
-        strip1.setPixelColor(k+q, 0);        //turn every third pixel off
-        strip2.setPixelColor(k+q, 0); 
-      }
-    }
-}
-
-//Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(uint8_t wait) {
-  for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
-    for (int q=0; q < 3; q++) {
-      for (uint16_t i=0; i < strip1.numPixels(); i=i+3) {
-        strip1.setPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
-      }
-      strip1.show();
-
-      delay(wait);
-
-      for (uint16_t i=0; i < strip1.numPixels(); i=i+3) {
-        strip1.setPixelColor(i+q, 0);        //turn every third pixel off
-      }
-    }
-  }
 }
 
 // Input a value 0 to 255 to get a color value.
